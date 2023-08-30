@@ -1,7 +1,7 @@
 /**
  * @title Moral issue ratings
  * @description What is and isn't a moral issue?
- * @version 0.2.0
+ * @version 0.2.1
  *
  * @assets assets/
  */
@@ -12,10 +12,7 @@ import '../styles/main.scss';
 import '@jspsych/plugin-survey/css/survey.css';
 import '../styles/mystyles.css';
 
-// import FullscreenPlugin from "@jspsych/plugin-fullscreen";
-//import HtmlKeyboardResponsePlugin from "@jspsych/plugin-html-keyboard-response";
 import survey from "@jspsych/plugin-survey";
-// import PreloadPlugin from "@jspsych/plugin-preload";
 import { initJsPsych } from "jspsych";
 import jsPsychPipe from "@jspsych-contrib/plugin-pipe";
 import _ from "lodash";
@@ -68,12 +65,6 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   const filename = `${subject_id}.csv`;
 
   const timeline = [];
-
-  // Welcome screen
-  // timeline.push({
-  //   type: HtmlKeyboardResponsePlugin,
-  //   stimulus: "<p>Welcome to my experiment! Press any key to start<p/>",
-  // });
 
   const names = [
     {
@@ -159,6 +150,14 @@ export async function run({ assetPaths, input = {}, environment, title, version 
     {
       name: 'Ryan',
       gender: 'm'
+    },
+    {
+      name: 'Logan',
+      gender: 'm'
+    },
+    {
+      name: 'Maria',
+      gender: 'f'
     }
   ]
 
@@ -262,14 +261,24 @@ export async function run({ assetPaths, input = {}, environment, title, version 
       name: 'copied-essay'
     },
     {
-      action_f: '[name] applies for a job with a resume that falsely indicates that she has an M.S. degree.',
-      action_m: '[name] applies for a job with a resume that falsely indicates that he has an M.S. degree.',
+      action_f: '[name] applies for a job with a résumé that falsely indicates that she has an M.S. degree.',
+      action_m: '[name] applies for a job with a résumé that falsely indicates that he has an M.S. degree.',
       name: 'false-resume'
     },
     {
       action_m: '[name] kisses a woman who isn\'t his girlfriend.',
       action_f: '[name] kisses a man who isn\'t her boyfriend.',
       name: 'kissed-someone-else'
+    },
+    {
+      action_m: '[name] drives 30 miles (about 48 kilometers) per hour over the speed limit. When you are asked to give your rating for this question, you must select the number two. This is an attention check.',
+      action_f: '[name] drives 30 miles (about 48 kilometers) per hour over the speed limit. When you are asked to give your rating for this question, you must select the number two. This is an attention check.',
+      name: 'attention-check-1'
+    },
+    {
+      action_m: '[name] orders a sandwich without tomatoes. When you are asked to give your rating for this question, you must select the number seven. This is an attention check.',
+      action_f: '[name] orders a sandwich without tomatoes. When you are asked to give your rating for this question, you must select the number seven. This is an attention check.',
+      name: 'attention-check-2'
     }
   ]
 
@@ -374,58 +383,128 @@ export async function run({ assetPaths, input = {}, environment, title, version 
 
   timeline.push(instructions);
 
-  var trial = {
-    type: survey,
-    pages: [
-      [
-        {
-          type: 'html',
-          //prompt: jsPsych.timelineVariable('case')
-          prompt: function () {
-            return '<p style=\"font-weight:bold;\">' + jsPsych.timelineVariable('case') + '</p>';
-          }
-        },
-        {
-          type: 'likert',
-          required: true,
-          name: jsPsych.timelineVariable('vignetteName'),
-          prompt: jsPsych.timelineVariable('prompt'),
-          likert_scale_min_label: 'Does not involve any moral issue',
-          likert_scale_max_label: 'Definitely involves a moral issue',
-          likert_scale_values: [
-            {value: 1},
-            {value: 2},
-            {value: 3},
-            {value: 4},
-            {value: 5},
-            {value: 6},
-            {value: 7}
-          ]
-        },
-        {
-          type: 'html',
-          prompt: '<p style=\"font-style:italic;\">Remember that you may use your own definitions of \"moral\" and \"moral issue\".</p>'
-        },
-        {
-          type: 'text',
-          name: 'reason',
-          textbox_rows: 2,
-          prompt: 'If you have a specific reason for choosing your response, please provide a short explanation.'
-        }
-      ]
-    ],
-    required_question_label: '',
-    button_label_finish: 'Continue'
-  };
-  
+  /* create the pages of the survey */
 
-  var survey_procedure = {
-    timeline: [trial],
-    timeline_variables: prompts,
-    randomize_order: true
+  const shuffledPrompts = _.shuffle(prompts);
+  const nPrompts = shuffledPrompts.length;
+  const survey_pages = [];
+
+  // iterate through the prompts
+  for (let i = 0; i < shuffledPrompts.length; i++) {
+    const prompt_i = shuffledPrompts[i];
+    //const page_i = [];
+
+    const qs = [];
+    // add the moral issue case
+    qs.push(
+      {
+        type: 'html',
+        prompt: '<p><div style=\"font-size:smaller;\">(Q' + (i+1).toString() + ' of ' + nPrompts.toString()
+         + ')</div><div style=\"font-weight:bold; display:inline;\">' + prompt_i.case + '</div></p>'
+      }
+    )
+    // add the likert question
+    qs.push(
+      {
+        type: 'likert',
+        required: true,
+        name: prompt_i.vignetteName,
+        prompt: prompt_i.prompt,
+        likert_scale_min_label: 'Does not involve any moral issue',
+        likert_scale_max_label: 'Definitely involves a moral issue',
+        likert_scale_values: [
+          {value: 1},
+          {value: 2},
+          {value: 3},
+          {value: 4},
+          {value: 5},
+          {value: 6},
+          {value: 7}
+        ]
+      }
+    )
+    // add the follow-up instructions
+    qs.push(
+      {
+        type: 'html',
+        prompt: '<p style=\"font-style:italic;\">Remember that you may use your own definitions of \"moral\" and \"moral issue\".</p>'
+      }
+    )
+    // add the feedback prompt
+    qs.push(
+      {
+        type: 'text',
+        name: 'reason' + '_' + prompt_i.vignetteName,
+        textbox_rows: 2,
+        prompt: 'If you have a specific reason for choosing your response, please provide a short explanation.'
+      }
+    )
+
+    survey_pages.push(qs);
+
   }
 
-  timeline.push(survey_procedure);
+
+  //console.log(survey_pages);
+
+  var trial = {
+    type: survey,
+    pages: survey_pages,
+    // [
+    //   [
+    //     {
+    //       type: 'html',
+    //       //prompt: jsPsych.timelineVariable('case')
+    //       prompt: function () {
+    //         return '<p style=\"font-weight:bold;\">' + jsPsych.timelineVariable('case') + '</p>';
+    //       }
+    //     },
+    //     {
+    //       type: 'likert',
+    //       required: true,
+    //       name: jsPsych.timelineVariable('vignetteName'),
+    //       prompt: jsPsych.timelineVariable('prompt'),
+    //       likert_scale_min_label: 'Does not involve any moral issue',
+    //       likert_scale_max_label: 'Definitely involves a moral issue',
+    //       likert_scale_values: [
+    //         {value: 1},
+    //         {value: 2},
+    //         {value: 3},
+    //         {value: 4},
+    //         {value: 5},
+    //         {value: 6},
+    //         {value: 7}
+    //       ]
+    //     },
+    //     {
+    //       type: 'html',
+    //       prompt: '<p style=\"font-style:italic;\">Remember that you may use your own definitions of \"moral\" and \"moral issue\".</p>'
+    //     },
+    //     {
+    //       type: 'text',
+    //       name: 'reason',
+    //       textbox_rows: 2,
+    //       prompt: 'If you have a specific reason for choosing your response, please provide a short explanation.'
+    //     }
+    //   ]
+    // ],
+    // required_question_label: '',
+    // button_label_finish: 'Continue'
+    button_label_next: 'Continue',
+    button_label_back: 'Back',
+    button_label_finish: 'Submit',
+    required_question_label: ''
+  };
+
+  timeline.push(trial);
+
+  // var survey_procedure = {
+  //   timeline: [trial],
+  //   timeline_variables: prompts,
+  //   randomize_order: true
+  // }
+
+  // timeline.push(survey_procedure);
 
   var feedback = {
     type: survey,
